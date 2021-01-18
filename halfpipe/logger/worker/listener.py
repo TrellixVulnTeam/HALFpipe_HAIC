@@ -17,7 +17,7 @@ schema = MessageSchema()
 
 
 async def listen(queue):
-    from halfpipe.logging import setup as setuplogging
+    from halfpipe.logger import setup as setuplogging
     setuplogging(queue)
 
     loop = get_running_loop()

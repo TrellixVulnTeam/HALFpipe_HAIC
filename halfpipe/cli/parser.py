@@ -94,14 +94,14 @@ def parse_args(args=None, namespace=None):
         print(__version__)
         sys.exit(0)
 
-    from ..logging import Context as LoggingContext
+    from ..logger import Context as LoggingContext
 
     LoggingContext.enablePrint()
 
     debug = opts.debug
     if debug:
         import logging
-        from ..logging import setup as setuplogging
+        from ..logger import setup as setuplogging
 
         setuplogging(LoggingContext.queue(), levelno=logging.DEBUG)
 

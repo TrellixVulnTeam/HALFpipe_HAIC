@@ -219,7 +219,7 @@ def run(opts, should_run):
 
 
 def main():
-    from ..logging import (
+    from ..logger import (
         setupcontext as setuplogging,
         teardown as teardownlogging
     )

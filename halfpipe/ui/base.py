@@ -20,7 +20,7 @@ from .step import Step
 from .. import __version__
 from ..model import SpecSchema, loadspec, savespec
 from ..io import Database
-from ..logging import Context as LoggingContext
+from ..logger import Context as LoggingContext
 
 from .file import BidsStep
 from .feature import FeaturesStep
