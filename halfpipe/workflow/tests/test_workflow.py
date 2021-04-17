@@ -11,21 +11,22 @@ from zipfile import ZipFile
 import tarfile
 from pathlib import Path
 from random import seed
+from collections import OrderedDict
 
 import pandas as pd
 import numpy as np
 import nibabel as nib
 from nilearn.image import new_img_like
-
 from nipype.pipeline import plugins as nip
+from fmriprep import config
 
 from ...tests.resource import setup as setuptestresources
 from ...resource import get as getresource
 from templateflow.api import get as gettemplate
 
-from ..base import init_workflow
+from ..base import IdentifiableWorkflow, init_workflow
 from ..execgraph import init_execgraph
-from ...io import Database
+from ...io.index import Database
 from ...model import FeatureSchema, FileSchema, SettingSchema, SpecSchema, savespec
 from ...utils import nvol, ceildiv
 
@@ -99,7 +100,9 @@ def task_events(tmp_path_factory, bids_data):
             break
 
     n = len(duration)
-    trial_type = list(np.random.permutation(["a", "b"] * ceildiv(n, 2)))[:n]
+    trial_type = list(
+        np.random.permutation(["a", "b"] * ceildiv(n, 2))
+    )[:n]
 
     events = pd.DataFrame(dict(onset=onset, duration=duration, trial_type=trial_type))
 
@@ -177,6 +180,7 @@ def mock_spec(bids_data, task_events, pcc_mask):
         dict(
             datatype="ref",
             suffix="map",
+            extension=".nii.gz",
             tags=dict(desc="smith09"),
             path=str(getresource("PNAS_Smith09_rsn10.nii.gz")),
             metadata=dict(space="MNI152NLin6Asym"),
@@ -184,6 +188,7 @@ def mock_spec(bids_data, task_events, pcc_mask):
         dict(
             datatype="ref",
             suffix="seed",
+            extension=".nii.gz",
             tags=dict(desc="pcc"),
             path=str(pcc_mask),
             metadata=dict(space="MNI152NLin6Asym"),
@@ -191,6 +196,7 @@ def mock_spec(bids_data, task_events, pcc_mask):
         dict(
             datatype="ref",
             suffix="atlas",
+            extension=".nii.gz",
             tags=dict(desc="schaefer2018"),
             path=str(gettemplate(
                 "MNI152NLin2009cAsym",
@@ -286,28 +292,32 @@ def test_with_reconall(tmp_path, mock_spec):
 
     savespec(mock_spec, workdir=tmp_path)
 
-    workflow = init_workflow(tmp_path)
+    workflow: IdentifiableWorkflow = init_workflow(tmp_path)
     workflow_args = dict(
         stop_on_first_crash=True,
     )
     workflow.config["execution"].update(workflow_args)
 
-    execgraphs = init_execgraph(tmp_path, workflow)
-    execgraph = execgraphs[0]
+    graphs: OrderedDict = init_execgraph(tmp_path, workflow)
+    graph = next(iter(graphs.values()))
+
+    assert len(graph.nodes()) > 0
 
 
 @pytest.mark.timeout(4 * 3600)
 def test_feature_extraction(tmp_path, mock_spec):
     savespec(mock_spec, workdir=tmp_path)
 
+    config.nipype.omp_nthreads = 4
+
     workflow = init_workflow(tmp_path)
     workflow_args = dict(
         stop_on_first_crash=True,
     )
     workflow.config["execution"].update(workflow_args)
 
-    execgraphs = init_execgraph(tmp_path, workflow)
-    execgraph = execgraphs[0]
+    graphs: OrderedDict = init_execgraph(tmp_path, workflow)
+    graph = next(iter(graphs.values()))
 
     runner = nip.LinearPlugin(plugin_args=workflow_args)
-    runner.run(execgraph, updatehash=False, config=workflow.config)
+    runner.run(graph, updatehash=False, config=workflow.config)
