@@ -181,7 +181,7 @@ def init_taskbased_wf(
             basisfnum=3,
         ))
     else:
-        raise ValueError(f'HRF "{feature.hrf}" is not yet implemented')
+        raise ValueError(f'HRF "{feature.hrf}" is not available')
 
     level1design = pe.Node(
         Level1Design(
